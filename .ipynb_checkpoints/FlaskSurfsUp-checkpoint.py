@@ -10,15 +10,20 @@ from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
 
-engine = create_engine("sqlite:///Resources/hawaii.sqlite")
+# engine = create_engine("sqlite:///Resources/hawaii.sqlite")
+
+engine = create_engine("sqlite:///Resources/hawaii.sqlite", connect_args={'check_same_thread': False}, echo=True)
+
+
 
 # reflect an existing database into a new model
 Base = automap_base()
+
 # reflect the tables
 Base.prepare(engine, reflect=True)
 
 # We can view all of the classes that automap found
-Base.classes.keys()
+# Base.classes.keys()
 
 # Save references to each table
 Measurement = Base.classes.measurement
@@ -31,58 +36,95 @@ session = Session(engine)
 app = Flask(__name__)
 
 # Flask Routes
-# @app.route("/")
-# def available():
-#     return"""<html>
-
-
 @app.route("/")
 
 def welcome():
 
     """List all available api routes."""
 
-    return (
+    return"""<html>
 
-        f"Available Routes:<br/>"
+    <h1>List of all available Honolulu, HI API routes</h1>
 
-        f"<br/>"
+    <ul>
 
-        f"/api/v1.0/precipitation<br/>"
+    <br>
 
-        f"- List of dates and percipitation observations from the last year<br/>"
+    <li>
 
-        f"<br/>"
+    Return a list of precipitations from last year:
 
-        f"/api/v1.0/stations<br/>"
+    <br>
 
-        f"- List of stations from the dataset<br/>"
+    <a href="/api/v1.0/precipitation">/api/v1.0/precipitation</a>
 
-        f"<br/>"
+    </li>
 
-        f"/api/v1.0/tobs<br/>"
+    <br>
 
-        f"- List of Temperature Observations (tobs) for the previous year<br/>"
+    <li>
 
-        f"<br/>"
+    Return a JSON list of stations from the dataset: 
 
-        f"/api/v1.0/start<br/>"
+    <br>
 
-        f"- List of the minimum temperature, the average temperature, and the max temperature for a given start or start-end range<br/>"
+   <a href="/api/v1.0/stations">/api/v1.0/stations</a>
 
-        f"<br/>"
+   </li>
 
-        f"/api/v1.0/start/end<br/>"
+    <br>
 
-        f"- List of the minimum temperature, the average temperature, and the max temperature for a given start or start-end range, inclusive<br/>"
+    <li>
+
+    Return a JSON list of Temperature Observations (tobs) for the previous year:
+
+    <br>
+
+    <a href="/api/v1.0/tobs">/api/v1.0/tobs</a>
+
+    </li>
+
+    <br>
+
+    <li>
+
+    Return a JSON list of tmin, tmax, tavg for the dates greater than or equal to the date provided:
+
+    <br>Replace &ltstart&gt with a date in Year-Month-Day format.
+
+    <br>
+
+    <a href="/api/v1.0/2017-01-01">/api/v1.0/2017-01-01</a>
+
+    </li>
+
+    <br>
+
+    <li>
+
+    Return a JSON list of tmin, tmax, tavg for the dates in range of start date and end date inclusive:
+
+    <br>
+
+    Replace &ltstart&gt and &ltend&gt with a date in Year-Month-Day format. 
+
+    <br>
+
+    <br>
+
+    <a href="/api/v1.0/2017-01-01/2017-01-07">/api/v1.0/2017-01-01/2017-01-07</a>
+
+    </li>
+
+    <br>
+
+    </ul>
+
+    </html>
 
 
 
-    )
-
-
-
-
+    """
 
 
 
@@ -91,6 +133,12 @@ def welcome():
 @app.route("/api/v1.0/precipitation")
 
 def precipitation():
+
+    # Docstring 
+
+    """Return a list of precipitations from last year"""
+
+    # Design a query to retrieve the last 12 months of precipitation data and plot the results
 
     max_date = session.query(Measurement.date).order_by(Measurement.date.desc()).first()
 
@@ -123,3 +171,127 @@ def precipitation():
 
 
     return jsonify(precipitation_dict)
+
+
+
+@app.route("/api/v1.0/stations")
+
+def stations(): 
+
+    # Docstring
+
+    """Return a JSON list of stations from the dataset."""
+
+    # Query stations
+
+    results_stations =  session.query(Measurement.station).group_by(Measurement.station).all()
+
+
+
+    # Convert list of tuples into normal list
+
+    stations_list = list(np.ravel(results_stations))
+
+
+
+    return jsonify(stations_list)
+
+
+
+@app.route("/api/v1.0/tobs")
+
+def tobs(): 
+
+    # Docstring
+
+    """Return a JSON list of Temperature Observations (tobs) for the previous year."""
+
+
+
+    # Design a query to retrieve the last 12 months of precipitation data and plot the results
+
+    max_date = session.query(Measurement.date).order_by(Measurement.date.desc()).first()
+
+
+
+    # Get the first element of the tuple
+
+    max_date = max_date[0]
+
+
+
+    # Calculate the date 1 year ago from today
+
+    # The days are equal 366 so that the first day of the year is included
+
+    year_ago = dt.datetime.strptime(max_date, "%Y-%m-%d") - dt.timedelta(days=366)
+
+    # Query tobs
+
+    results_tobs = session.query(Measurement.date, Measurement.tobs).filter(Measurement.date >= year_ago).all()
+
+
+
+    # Convert list of tuples into normal list
+
+    tobs_list = list(results_tobs)
+
+
+
+    return jsonify(tobs_list)
+
+
+
+
+
+
+
+@app.route("/api/v1.0/<start>")
+
+def start(start=None):
+
+
+
+    # Docstring
+
+    """Return a JSON list of tmin, tmax, tavg for the dates greater than or equal to the date provided"""
+
+
+
+    from_start = session.query(Measurement.date, func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).filter(Measurement.date >= start).group_by(Measurement.date).all()
+
+    from_start_list=list(from_start)
+
+    return jsonify(from_start_list)
+
+
+
+    
+
+
+
+@app.route("/api/v1.0/<start>/<end>")
+
+def start_end(start=None, end=None):
+
+    # Docstring
+
+    """Return a JSON list of tmin, tmax, tavg for the dates in range of start date and end date inclusive"""
+
+    
+
+    between_dates = session.query(Measurement.date, func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).filter(Measurement.date >= start).filter(Measurement.date <= end).group_by(Measurement.date).all()
+
+    between_dates_list=list(between_dates)
+
+    return jsonify(between_dates_list)
+
+
+
+
+
+
+
+if __name__ == '__main__':
+
+    app.run(debug=True)

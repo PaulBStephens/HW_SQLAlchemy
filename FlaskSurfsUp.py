@@ -10,15 +10,20 @@ from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
 
-engine = create_engine("sqlite:///Resources/hawaii.sqlite")
+# engine = create_engine("sqlite:///Resources/hawaii.sqlite")
+
+engine = create_engine("sqlite:///Resources/hawaii.sqlite", connect_args={'check_same_thread': False}, echo=True)
+
+
 
 # reflect an existing database into a new model
 Base = automap_base()
+
 # reflect the tables
 Base.prepare(engine, reflect=True)
 
 # We can view all of the classes that automap found
-Base.classes.keys()
+# Base.classes.keys()
 
 # Save references to each table
 Measurement = Base.classes.measurement
@@ -31,239 +36,262 @@ session = Session(engine)
 app = Flask(__name__)
 
 # Flask Routes
-# @app.route("/")
-# def available():
-#     return"""<html>
-
-
 @app.route("/")
 
 def welcome():
 
     """List all available api routes."""
 
-    return (
+    return"""<html>
 
-        f"Available Routes:<br/>"
+    <h1>List of all available Honolulu, HI API routes</h1>
 
-        f"<br/>"
+    <ul>
 
-        f"/api/v1.0/precipitation<br/>"
+    <br>
 
-        f"- List of dates and percipitation observations from the last year<br/>"
+    <li>
 
-        f"<br/>"
+    Return a list of precipitations from last year:
 
-        f"/api/v1.0/stations<br/>"
+    <br>
 
-        f"- List of stations from the dataset<br/>"
+    <a href="/api/v1.0/precipitation">/api/v1.0/precipitation</a>
 
-        f"<br/>"
+    </li>
 
-        f"/api/v1.0/tobs<br/>"
+    <br>
 
-        f"- List of Temperature Observations (tobs) for the previous year<br/>"
+    <li>
 
-        f"<br/>"
+    Return a JSON list of stations from the dataset: 
 
-        f"/api/v1.0/start<br/>"
+    <br>
 
-        f"- List of the minimum temperature, the average temperature, and the max temperature for a given start or start-end range<br/>"
+   <a href="/api/v1.0/stations">/api/v1.0/stations</a>
 
-        f"<br/>"
+   </li>
 
-        f"/api/v1.0/start/end<br/>"
+    <br>
 
-        f"- List of the minimum temperature, the average temperature, and the max temperature for a given start or start-end range, inclusive<br/>"
+    <li>
+
+    Return a JSON list of Temperature Observations (tobs) for the previous year:
+
+    <br>
+
+    <a href="/api/v1.0/tobs">/api/v1.0/tobs</a>
+
+    </li>
+
+    <br>
+
+    <li>
+
+    Return a JSON list of tmin, tmax, tavg for the dates greater than or equal to the date provided:
+
+    <br>Replace &ltstart&gt with a date in Year-Month-Day format.
+
+    <br>
+
+    <a href="/api/v1.0/2017-01-01">/api/v1.0/2017-01-01</a>
+
+    </li>
+
+    <br>
+
+    <li>
+
+    Return a JSON list of tmin, tmax, tavg for the dates in range of start date and end date inclusive:
+
+    <br>
+
+    Replace &ltstart&gt and &ltend&gt with a date in Year-Month-Day format. 
+
+    <br>
+
+    <br>
+
+    <a href="/api/v1.0/2017-01-01/2017-01-07">/api/v1.0/2017-01-01/2017-01-07</a>
+
+    </li>
+
+    <br>
+
+    </ul>
+
+    </html>
 
 
 
-    )
+    """
 
 
 
 
-
-
-
-
-
-# @app.route("/api/v1.0/precipitation")
-
-# def precipitation():
-
-#     max_date = session.query(Measurement.date).order_by(Measurement.date.desc()).first()
-
-
-
-#     # Get the first element of the tuple
-
-#     max_date = max_date[0]
-
-
-
-#     # Calculate the date 1 year ago from today
-
-#     # The days are equal 366 so that the first day of the year is included
-
-#     year_ago = dt.datetime.strptime(max_date, "%Y-%m-%d") - dt.timedelta(days=366)
-
-    
-
-#     # Perform a query to retrieve the data and precipitation scores
-
-#     results_precipitation = session.query(Measurement.date, Measurement.prcp).filter(Measurement.date >= year_ago).all()
-
-
-
-#     # Convert list of tuples into normal list
-
-#     precipitation_dict = dict(results_precipitation)
-
-
-
-#     return jsonify(precipitation_dict)
 
 @app.route("/api/v1.0/precipitation")
 
 def precipitation():
 
-    """List of dates and precipitation observations from the last year"""
+    # Docstring 
 
-#Query for the dates and pcrp NOT temperature observations from the last year.
+    """Return a list of precipitations from last year"""
 
-#Convert the query results to a Dictionary using date as the key and tobs as the value.
+    # Design a query to retrieve the last 12 months of precipitation data and plot the results
 
-#Return the JSON representation of your dictionary.
-
-    last_date = session.query(measurement.date).order_by(measurement.date.desc()).first()
-
-    last_year = dt.date(2017, 8, 23) - dt.timedelta(days=365)
-
-    rain = session.query(measurement.date, measurement.prcp).\
-
-        filter(measurement.date > last_year).\
-
-        order_by(measurement.date).all()
+    max_date = session.query(Measurement.date).order_by(Measurement.date.desc()).first()
 
 
 
-    prcp_totals = []
+    # Get the first element of the tuple
 
-    for result in rain:
-
-        row = {}
-
-        row["date"] = rain[0]
-
-        row["prcp"] = rain[1]
-
-        prcp_totals.append(row)
+    max_date = max_date[0]
 
 
 
-    return jsonify(prcp_totals)
+    # Calculate the date 1 year ago from today
+
+    # The days are equal 366 so that the first day of the year is included
+
+    year_ago = dt.datetime.strptime(max_date, "%Y-%m-%d") - dt.timedelta(days=366)
+
+    
+
+    # Perform a query to retrieve the data and precipitation scores
+
+    results_precipitation = session.query(Measurement.date, Measurement.prcp).filter(Measurement.date >= year_ago).all()
+
+
+
+    # Convert list of tuples into normal list
+
+    precipitation_dict = dict(results_precipitation)
+
+
+
+    return jsonify(precipitation_dict)
 
 
 
 @app.route("/api/v1.0/stations")
 
-def stations():
+def stations(): 
 
-    stations_query = session.query(station.name, station.station)
+    # Docstring
 
-    stations = pd.read_sql(stations_query.statement, stations_query.session.bind)
+    """Return a JSON list of stations from the dataset."""
 
-    return jsonify(stations.to_dict())
+    # Query stations
 
-
-
-def tobs():
-
-    """List of Temperature Observations (tobs) for the previous year"""
+    results_stations =  session.query(Measurement.station).group_by(Measurement.station).all()
 
 
 
-    last_date = session.query(measurement.date).order_by(measurement.date.desc()).first()
+    # Convert list of tuples into normal list
 
-    last_year = dt.date(2017, 8, 23) - dt.timedelta(days=365)
-
-    temperature = session.query(measurement.date, measurement.tobs).\
-
-        filter(measurement.date > last_year).\
-
-        order_by(measurement.date).all()
+    stations_list = list(np.ravel(results_stations))
 
 
 
-    temp_totals = []
-
-    for result in temperature:
-
-        row = {}
-
-        row["date"] = temperature[0]
-
-        row["tobs"] = temperature[1]
-
-        temp_totals.append(row)
+    return jsonify(stations_list)
 
 
 
-    return jsonify(temp_totals)
+@app.route("/api/v1.0/tobs")
+
+def tobs(): 
+
+    # Docstring
+
+    """Return a JSON list of Temperature Observations (tobs) for the previous year."""
+
+
+
+    # Design a query to retrieve the last 12 months of precipitation data and plot the results
+
+    max_date = session.query(Measurement.date).order_by(Measurement.date.desc()).first()
+
+
+
+    # Get the first element of the tuple
+
+    max_date = max_date[0]
+
+
+
+    # Calculate the date 1 year ago from today
+
+    # The days are equal 366 so that the first day of the year is included
+
+    year_ago = dt.datetime.strptime(max_date, "%Y-%m-%d") - dt.timedelta(days=366)
+
+    # Query tobs
+
+    results_tobs = session.query(Measurement.date, Measurement.tobs).filter(Measurement.date >= year_ago).all()
+
+
+
+    # Convert list of tuples into normal list
+
+    tobs_list = list(results_tobs)
+
+
+
+    return jsonify(tobs_list)
+
+
+
+
 
 
 
 @app.route("/api/v1.0/<start>")
 
-def option1(start):
+def start(start=None):
 
 
 
-    start_date= dt.datetime.strptime(start, '%Y-%m-%d')
+    # Docstring
 
-    last_year = dt.timedelta(days=365)
+    """Return a JSON list of tmin, tmax, tavg for the dates greater than or equal to the date provided"""
 
-    start = start_date-last_year
 
-    end =  dt.date(2017, 8, 23)
 
-    trip_data = session.query(func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)).\
+    from_start = session.query(Measurement.date, func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).filter(Measurement.date >= start).group_by(Measurement.date).all()
 
-        filter(measurement.date >= start).filter(measurement.date <= end).all()
+    from_start_list=list(from_start)
 
-    trip = list(np.ravel(trip_data))
+    return jsonify(from_start_list)
 
-    return jsonify(trip)
+
+
+    
 
 
 
 @app.route("/api/v1.0/<start>/<end>")
 
-def option2(start,end):
+def start_end(start=None, end=None):
+
+    # Docstring
+
+    """Return a JSON list of tmin, tmax, tavg for the dates in range of start date and end date inclusive"""
+
+    
+
+    between_dates = session.query(Measurement.date, func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).filter(Measurement.date >= start).filter(Measurement.date <= end).group_by(Measurement.date).all()
+
+    between_dates_list=list(between_dates)
+
+    return jsonify(between_dates_list)
 
 
 
-    start_date= dt.datetime.strptime(start, '%Y-%m-%d')
-
-    end_date= dt.datetime.strptime(end,'%Y-%m-%d')
-
-    last_year = dt.timedelta(days=365)
-
-    start = start_date-last_year
-
-    end = end_date-last_year
-
-    trip_data = session.query(func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)).\
-
-        filter(measurement.date >= start).filter(measurement.date <= end).all()
-
-    trip = list(np.ravel(trip_data))
-
-    return jsonify(trip)
 
 
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
 
     app.run(debug=True)
